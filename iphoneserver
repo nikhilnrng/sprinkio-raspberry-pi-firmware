@@ -1,0 +1,34 @@
+from twisted.internet.protocol import Protocol, Factory
+from twisted.internet import reactor
+
+import serial
+import RPi.GPIO as GPIO
+
+GPIO.setmode(GPIO.BOARD) ## Use board pin numbering
+GPIO.setup(3, GPIO.OUT) ## Setup GPIO Pin 3 to OUT
+
+class RaspberryLight(Protocol):
+	def connectionMade(self):
+		#self.transport.write("""connected""")
+		self.factory.clients.append(self)
+		print "clients are ", self.factory.clients
+
+	def connectionLost(self, reason):
+		print "connection lost ", self.factory.clients
+		self.factory.clients.remove(self)
+
+	def dataReceived(self, data):
+		msg = ""
+		print data
+		GPIO.output(3, True)
+		ser = serial.Serial("/dev/ttyAMA0")
+		ser.baudrate = 9600
+		ser.write(data)
+
+factory = Factory()
+factory.protocol = RaspberryLight
+factory.clients = []
+
+reactor.listenTCP(7777, factory)
+print "RaspberryLight server started"
+reactor.run()
